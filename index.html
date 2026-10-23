@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recetario Gelatec</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1F6F5C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Recetario">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root {
+    --menta: #E6F4EC;
+    --pistacho: #1F6F5C;
+    --fresa: #D6336C;
+    --chocolate: #3A2218;
+    --vainilla: #FFF3CF;
+    --blanco: #FFFFFF;
+    --linea: #C5DFD1;
+    --c-helado: #F7B6C8;
+    --c-alcohol: #F5C86A;
+    --c-cero: #A9DCC0;
+    --c-mia: #C9C3F0;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--menta); color: var(--chocolate);
+    font-family: "Avenir Next", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 18px; line-height: 1.45; }
+  body { padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0); }
+  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; margin: 0; line-height: 1.15; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--fresa); outline-offset: 2px; }
+
+  .app { max-width: 720px; margin: 0 auto; padding: 0 16px 120px; }
+
+  header { padding: 22px 0 10px; display: flex; align-items: center; gap: 12px; }
+  header .logo { width: 52px; height: 52px; border-radius: 14px; flex: none; }
+  header h1 { font-size: 1.7rem; color: var(--pistacho); font-weight: 700; }
+  header p { margin: 2px 0 0; font-size: .9rem; opacity: .8; }
+  #btnInstalar { margin-left: auto; display: none; background: var(--fresa); color: #fff; border: 0;
+    border-radius: 14px; padding: 10px 14px; font-weight: 700; font-size: .9rem; }
+
+  .buscar { width: 100%; border: 2px solid var(--linea); background: var(--blanco); border-radius: 16px;
+    padding: 14px 16px; font-size: 1rem; }
+  .buscar:focus { border-color: var(--pistacho); outline: none; }
+
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 14px 2px 6px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: none; border: 2px solid var(--linea); background: var(--blanco); border-radius: 999px;
+    padding: 9px 16px; font-weight: 600; font-size: .95rem; min-height: 44px; }
+  .chip[aria-pressed="true"] { background: var(--pistacho); border-color: var(--pistacho); color: #fff; }
+
+  .lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+  .fila { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+    background: var(--blanco); border: 2px solid var(--linea); border-radius: 20px; padding: 10px; min-height: 84px; }
+  .fila:active { background: var(--vainilla); }
+  .tile { width: 64px; height: 64px; border-radius: 16px; flex: none; display: grid; place-items: center;
+    font-size: 2rem; overflow: hidden; background: var(--c-helado); }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .fila .txt { min-width: 0; }
+  .fila h3 { font-size: 1.12rem; }
+  .fila small { display: block; opacity: .75; font-size: .85rem; margin-top: 3px; }
+
+  .vacio { text-align: center; padding: 28px 12px; opacity: .8; }
+
+  .cecotec { display: block; margin-top: 18px; background: var(--vainilla); border: 2px dashed #E0B94A;
+    border-radius: 20px; padding: 14px 16px; color: var(--chocolate); text-decoration: none; }
+  .cecotec strong { display: block; font-family: Georgia, serif; font-size: 1.05rem; }
+  .cecotec span { font-size: .9rem; opacity: .85; }
+
+  .fab { position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--fresa); color: #fff; border: 0;
+    border-radius: 999px; padding: 15px 26px; font-weight: 700; font-size: 1.02rem;
+    box-shadow: 0 6px 18px rgba(58,34,24,.3); z-index: 5; }
+
+  /* pantallas completas */
+  .pantalla { position: fixed; inset: 0; background: var(--menta); z-index: 20; overflow-y: auto;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0); display: none; }
+  .pantalla.abierta { display: block; }
+  .pantalla .cuerpo { max-width: 720px; margin: 0 auto; padding: 0 16px 60px; }
+  .atras { position: sticky; top: 0; z-index: 2; background: var(--menta); padding: 12px 0; }
+  .atras button { background: var(--blanco); border: 2px solid var(--linea); border-radius: 14px;
+    padding: 10px 16px; font-weight: 700; min-height: 46px; }
+
+  .portada { width: 100%; aspect-ratio: 16 / 10; border-radius: 24px; overflow: hidden; display: grid;
+    place-items: center; font-size: 5rem; margin: 6px 0 14px; }
+  .portada img { width: 100%; height: 100%; object-fit: cover; }
+  .detalle h2 { font-size: 1.8rem; color: var(--pistacho); }
+  .origen { margin: 6px 0 0; font-size: .9rem; opacity: .8; }
+  .nota { background: var(--vainilla); border-radius: 16px; padding: 12px 14px; margin: 14px 0; font-size: .95rem; }
+  .detalle h3 { margin: 22px 0 8px; font-size: 1.25rem; }
+  .detalle ul, .detalle ol { margin: 0; padding-left: 1.3em; }
+  .detalle li { margin: 7px 0; }
+  .acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .btn { border: 2px solid var(--pistacho); background: var(--blanco); color: var(--pistacho);
+    border-radius: 14px; padding: 12px 16px; font-weight: 700; min-height: 48px; }
+  .btn.peligro { border-color: #B3261E; color: #B3261E; }
+  .btn.principal { background: var(--pistacho); color: #fff; }
+
+  form label { display: block; margin: 16px 0 6px; font-weight: 700; }
+  form input[type=text], form select, form textarea { width: 100%; border: 2px solid var(--linea);
+    background: var(--blanco); border-radius: 14px; padding: 12px 14px; }
+  form textarea { min-height: 130px; resize: vertical; }
+  form .ayuda { font-size: .85rem; opacity: .75; margin: 4px 0 0; }
+  .aviso { text-align: center; font-size: .85rem; opacity: .7; margin: 26px 0 0; }
+  input[type=file] { display: none; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .fila, .chip, .fab { transition: background .15s, transform .1s; }
+    .fab:active { transform: translateX(-50%) scale(.97); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <img class="logo" src="icon-192.png" alt="">
+    <div>
+      <h1>Recetario Gelatec</h1>
+      <p>Helados, batidos y cócteles</p>
+    </div>
+    <button id="btnInstalar" type="button">Instalar</button>
+  </header>
+
+  <input id="buscar" class="buscar" type="search" placeholder="Buscar receta o ingrediente" aria-label="Buscar receta o ingrediente">
+  <div class="chips" id="chips" role="group" aria-label="Categorías"></div>
+
+  <ul class="lista" id="lista"></ul>
+
+  <a class="cecotec" href="https://cecotec.es/recetas/buscar?q=gelatec%201800" target="_blank" rel="noopener">
+    <strong>Más recetas en la web de Cecotec</strong>
+    <span>Se abre en el navegador. Necesitas conexión a internet.</span>
+  </a>
+  <p class="aviso">Los cócteles con alcohol son solo para mayores de edad. Disfruta con moderación.</p>
+</div>
+
+<button class="fab" id="btnNueva" type="button">＋ Añadir receta</button>
+
+<!-- Detalle -->
+<section class="pantalla" id="pDetalle" aria-label="Receta">
+  <div class="cuerpo">
+    <div class="atras"><button type="button" data-cerrar>← Volver</button></div>
+    <article class="detalle" id="detalle"></article>
+  </div>
+</section>
+
+<!-- Nueva receta -->
+<section class="pantalla" id="pNueva" aria-label="Nueva receta">
+  <div class="cuerpo">
+    <div class="atras"><button type="button" data-cerrar>← Cancelar</button></div>
+    <h2 style="font-size:1.7rem;color:var(--pistacho)">Nueva receta</h2>
+    <form id="formNueva">
+      <label for="fNombre">Nombre</label>
+      <input id="fNombre" type="text" required maxlength="80" placeholder="Por ejemplo: Helado de chocolate">
+
+      <label for="fCat">Tipo</label>
+      <select id="fCat">
+        <option value="helado">Helado</option>
+        <option value="alcohol">Cóctel con alcohol</option>
+        <option value="cero">Sin alcohol (0,0)</option>
+        <option value="mia" selected>Otra</option>
+      </select>
+
+      <label for="fIngr">Ingredientes</label>
+      <textarea id="fIngr" required placeholder="Uno por línea&#10;200 g de fresas&#10;100 g de queso crema"></textarea>
+
+      <label for="fPasos">Preparación</label>
+      <textarea id="fPasos" required placeholder="Un paso por línea"></textarea>
+
+      <label for="fOrigen">Dónde la encontraste (opcional)</label>
+      <input id="fOrigen" type="text" maxlength="120" placeholder="Por ejemplo: web de Cecotec">
+
+      <label>Foto (opcional)</label>
+      <button class="btn" type="button" id="btnFotoNueva">Elegir foto</button>
+      <p class="ayuda" id="fotoNuevaEstado">Sin foto</p>
+
+      <div class="acciones">
+        <button class="btn principal" type="submit">Guardar receta</button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<input id="inputFoto" type="file" accept="image/*">
+
+<script>
+"use strict";
+
+/* ---------- Datos ---------- */
+const CATS = {
+  helado:  { nombre: "Helados",          color: "var(--c-helado)" },
+  alcohol: { nombre: "Con alcohol",      color: "var(--c-alcohol)" },
+  cero:    { nombre: "Sin alcohol 0,0",  color: "var(--c-cero)" },
+  mia:     { nombre: "Mis recetas",      color: "var(--c-mia)" }
+};
+
+const NOTA_TARRINA = "Cantidades de la receta original de Cecotec. La Gelatec 1800 tiene tarrinas de 450 ml: si la mezcla no cabe, haz media receta y no llenes la tarrina por encima de su límite.";
+const NOTA_ALCOHOL = "El alcohol impide que la mezcla se congele bien, así que no lo metas en la tarrina para congelar. Añádelo al final, al triturar con el hielo. Receta propia de la app, no probada en la Gelatec.";
+const NOTA_1800 = "Receta propia de la app, pensada para la tarrina de 450 ml de la Gelatec 1800 (unos 400 ml de mezcla, sin llenarla hasta arriba). No está probada en tu máquina: ajusta el azúcar a tu gusto.";
+const NOTA_PROPIA = "Receta sugerida por la app (no es de Cecotec). Para los tiempos exactos del programa, consulta el recetario de tu Gelatec.";
+
+const BASE = [
+  { id: "h-fresas", cat: "helado", emoji: "🍓", nombre: "Helado de fresas", origen: "Cecotec · Twist&Ice y Gelatec", nota: NOTA_TARRINA,
+    ingr: ["200 g de fresas", "100 g de queso crema", "75 g de azúcar", "250 g de nata para cocinar"],
+    pasos: ["Trituramos las fresas con el queso crema, el azúcar y la nata.", "Congelamos al menos 24 horas.", "Procesamos en la Gelatec con el programa de helado.", "Servimos."] },
+  { id: "h-vainilla", cat: "helado", emoji: "🍦", nombre: "Helado de vainilla", origen: "Cecotec · Twist&Ice y Gelatec", nota: NOTA_TARRINA,
+    ingr: ["400 g de nata para cocinar", "150 g de leche condensada", "20 g de extracto de vainilla"],
+    pasos: ["Mezclamos la nata con la leche condensada y el extracto de vainilla.", "Congelamos al menos 24 horas.", "Colocamos la jarra en su posición, pulsamos el programa Gelato y dejamos procesar.", "Servimos."] },
+  { id: "h-oreo", cat: "helado", emoji: "🍪", nombre: "Helado de Oreo", origen: "Cecotec · Twist&Ice y Gelatec", nota: NOTA_TARRINA,
+    ingr: ["500 g de nata para cocinar", "100 g de leche condensada", "1 cucharada de extracto de vainilla", "1 cucharada de leche en polvo", "3 galletas Oreo"],
+    pasos: ["Mezclamos la nata con la leche condensada, el extracto de vainilla, la leche en polvo y las galletas Oreo troceadas.", "Congelamos al menos 24 horas.", "Procesamos en la Gelatec con el programa de helado.", "Servimos."] },
+  { id: "h-pistacho", cat: "helado", emoji: "🥜", nombre: "Helado de pistacho", origen: "Cecotec · Twist&Ice y Gelatec", nota: NOTA_TARRINA,
+    ingr: ["500 g de nata para cocinar", "75 g de azúcar", "100 g de pistachos pelados", "1 cucharada de crema de pistacho", "1 cucharada de leche en polvo"],
+    pasos: ["Trituramos la nata con los pistachos, el azúcar y la leche en polvo.", "Congelamos al menos 24 horas.", "Añadimos a la jarra la crema de pistacho, pulsamos el programa Ice cream y dejamos procesar.", "Servimos."] },
+  { id: "h-yogur", cat: "helado", emoji: "🥛", nombre: "Helado de yogur", origen: "Cecotec · Twist&Ice y Gelatec", nota: NOTA_TARRINA,
+    ingr: ["300 g de yogur", "200 g de nata", "75 g de azúcar", "1 cucharada de leche en polvo"],
+    pasos: ["Mezclamos la nata con el yogur, el azúcar y la leche en polvo.", "Congelamos al menos 24 horas.", "Colocamos la jarra en su posición, pulsamos el programa Frozen yoghourt (Yogur helado) y dejamos procesar.", "Servimos."] },
+
+  { id: "p-vainilla", cat: "helado", adapt: true, emoji: "🍦", nombre: "Helado de vainilla (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["200 g de nata para cocinar", "100 ml de leche entera", "75 g de leche condensada", "1 cucharadita de extracto de vainilla"],
+    pasos: ["Mezclamos todo hasta que quede uniforme.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos en la Gelatec con el programa Gelato.", "Si queda polvoriento, usamos Re-spin para cremarlo."] },
+  { id: "p-chocolate", cat: "helado", adapt: true, emoji: "🍫", nombre: "Helado de chocolate (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["250 ml de leche entera", "100 g de nata para cocinar", "50 g de azúcar", "25 g de cacao puro en polvo"],
+    pasos: ["Calentamos un poco la leche y disolvemos el azúcar y el cacao sin grumos.", "Dejamos enfriar, añadimos la nata y mezclamos.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Helado."] },
+  { id: "p-fresas", cat: "helado", adapt: true, emoji: "🍓", nombre: "Helado de fresas (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["150 g de fresas", "100 g de queso crema", "50 g de azúcar", "100 g de nata para cocinar"],
+    pasos: ["Trituramos las fresas con el queso crema, el azúcar y la nata.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Helado."] },
+  { id: "p-yogur", cat: "helado", adapt: true, emoji: "🥛", nombre: "Helado de yogur (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["200 g de yogur natural", "120 g de nata para cocinar", "50 g de azúcar", "1 cucharada de leche en polvo"],
+    pasos: ["Mezclamos todo hasta disolver el azúcar.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Yogur helado."] },
+  { id: "p-oreo", cat: "helado", adapt: true, emoji: "🍪", nombre: "Helado de Oreo (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["200 g de nata para cocinar", "100 ml de leche entera", "50 g de leche condensada", "3 galletas Oreo"],
+    pasos: ["Mezclamos la nata, la leche y la leche condensada.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Helado.", "Añadimos las galletas troceadas y damos un último ciclo con Re-spin para mezclarlas."] },
+  { id: "p-cafe", cat: "helado", adapt: true, emoji: "☕", nombre: "Helado de café (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["250 ml de leche entera", "100 g de nata para cocinar", "50 g de azúcar", "2 cucharaditas de café soluble"],
+    pasos: ["Disolvemos el café soluble y el azúcar en la leche templada.", "Dejamos enfriar y añadimos la nata.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Helado."] },
+  { id: "p-mango", cat: "helado", adapt: true, emoji: "🥭", nombre: "Sorbete de mango (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["300 g de mango maduro en trozos", "50 g de azúcar", "Zumo de medio limón", "50 ml de agua"],
+    pasos: ["Trituramos el mango con el azúcar, el limón y el agua.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Sorbete."] },
+  { id: "p-limon", cat: "helado", adapt: true, emoji: "🍋", nombre: "Sorbete de limón (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["120 ml de zumo de limón", "80 g de azúcar", "200 ml de agua"],
+    pasos: ["Disolvemos el azúcar en el agua y añadimos el zumo de limón.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Sorbete."] },
+  { id: "p-platano", cat: "helado", adapt: true, emoji: "🍌", nombre: "Helado light de plátano y cacao (tarrina 450 ml)", origen: "Receta propia · Gelatec 1800", nota: NOTA_1800,
+    ingr: ["2 plátanos muy maduros (unos 250 g)", "100 ml de leche", "1 cucharada de cacao puro en polvo"],
+    pasos: ["Trituramos los plátanos con la leche y el cacao.", "Vertimos en la tarrina y congelamos al menos 24 horas.", "Procesamos con el programa Helado Light."] },
+
+  { id: "a-mojito", cat: "alcohol", emoji: "🍃", nombre: "Mojito helado", origen: "Receta propia de la app", nota: NOTA_ALCOHOL,
+    ingr: ["60 ml de ron blanco", "25 ml de zumo de lima", "2 cucharaditas de azúcar", "10 hojas de hierbabuena", "200 g de hielo picado", "Un chorrito de soda"],
+    pasos: ["Trituramos el hielo con la hierbabuena, el azúcar, la lima y el ron hasta que quede granizado.", "Servimos en vaso alto y completamos con soda.", "Decoramos con una ramita de hierbabuena."] },
+  { id: "a-colada", cat: "alcohol", emoji: "🍍", nombre: "Piña colada", origen: "Receta propia de la app", nota: NOTA_ALCOHOL,
+    ingr: ["60 ml de ron blanco", "90 ml de zumo de piña", "45 ml de crema de coco", "200 g de hielo"],
+    pasos: ["Trituramos todos los ingredientes hasta obtener una textura cremosa y helada.", "Servimos al momento en copa o vaso grande.", "Decoramos con un trozo de piña."] },
+  { id: "a-margarita", cat: "alcohol", emoji: "🍋", nombre: "Margarita helada", origen: "Receta propia de la app", nota: NOTA_ALCOHOL,
+    ingr: ["50 ml de tequila", "25 ml de licor de naranja (triple seco)", "25 ml de zumo de lima", "1 cucharada de sirope o azúcar", "200 g de hielo", "Sal para el borde de la copa"],
+    pasos: ["Pasamos un trozo de lima por el borde de la copa y lo mojamos en sal.", "Trituramos el resto de ingredientes con el hielo.", "Servimos en la copa preparada."] },
+  { id: "a-daiquiri", cat: "alcohol", emoji: "🍓", nombre: "Daiquiri de fresa", origen: "Receta propia de la app", nota: NOTA_ALCOHOL,
+    ingr: ["60 ml de ron blanco", "25 ml de zumo de lima", "100 g de fresas", "1 cucharada de azúcar", "200 g de hielo"],
+    pasos: ["Trituramos las fresas con el azúcar, la lima y el ron.", "Añadimos el hielo y trituramos de nuevo hasta que quede espeso.", "Servimos al momento."] },
+  { id: "a-caipirinha", cat: "alcohol", emoji: "🍹", nombre: "Caipirinha granizada", origen: "Receta propia de la app", nota: NOTA_ALCOHOL,
+    ingr: ["60 ml de cachaça", "1 lima cortada en trozos", "2 cucharadas de azúcar", "200 g de hielo picado"],
+    pasos: ["Machacamos la lima con el azúcar en el vaso.", "Trituramos aparte el hielo con la cachaça hasta que quede granizado.", "Mezclamos con la lima machacada y servimos."] },
+
+  { id: "c-mojito", cat: "cero", emoji: "🍃", nombre: "Mojito 0,0", origen: "Receta propia de la app", nota: NOTA_PROPIA,
+    ingr: ["25 ml de zumo de lima", "2 cucharaditas de azúcar", "10 hojas de hierbabuena", "200 g de hielo picado", "150 ml de agua con gas"],
+    pasos: ["Trituramos el hielo con la hierbabuena, el azúcar y la lima.", "Servimos en vaso alto y completamos con el agua con gas."] },
+  { id: "c-colada", cat: "cero", emoji: "🥥", nombre: "Piña colada 0,0", origen: "Receta propia de la app", nota: NOTA_PROPIA,
+    ingr: ["120 ml de zumo de piña", "45 ml de crema de coco", "200 g de hielo"],
+    pasos: ["Trituramos todo hasta que quede cremoso y helado.", "Servimos al momento."] },
+  { id: "c-limon", cat: "cero", emoji: "🍋", nombre: "Granizado de limón", origen: "Receta propia de la app", nota: NOTA_PROPIA,
+    ingr: ["150 ml de zumo de limón", "60 g de azúcar", "350 ml de agua"],
+    pasos: ["Disolvemos el azúcar en el agua y añadimos el zumo de limón.", "Congelamos la mezcla en la tarrina.", "Procesamos en la Gelatec con el programa Granizados.", "Servimos en vaso."] },
+  { id: "c-sandia", cat: "cero", emoji: "🍉", nombre: "Granizado de sandía", origen: "Receta propia de la app", nota: NOTA_PROPIA,
+    ingr: ["400 g de sandía sin pepitas", "Zumo de media lima"],
+    pasos: ["Trituramos la sandía con el zumo de lima.", "Congelamos la mezcla en la tarrina.", "Procesamos en la Gelatec con el programa Granizados.", "Servimos en vaso."] },
+  { id: "c-fresa", cat: "cero", emoji: "🍓", nombre: "Batido de fresa", origen: "Receta propia de la app", nota: NOTA_PROPIA,
+    ingr: ["200 g de fresas congeladas", "250 ml de leche", "1 yogur natural", "1 cucharada de azúcar o miel"],
+    pasos: ["Ponemos todo en la tarrina.", "Procesamos en la Gelatec con el programa Batidos.", "Servimos al momento."] },
+  { id: "c-cacao", cat: "cero", emoji: "🍌", nombre: "Batido de plátano y cacao", origen: "Receta propia de la app", nota: NOTA_PROPIA,
+    ingr: ["1 plátano congelado en trozos", "250 ml de leche", "1 cucharada de cacao puro en polvo", "1 cucharadita de miel"],
+    pasos: ["Ponemos todo en la tarrina.", "Procesamos en la Gelatec con el programa Batidos.", "Servimos al momento."] }
+];
+
+/* ---------- Almacenamiento (en el propio móvil) ---------- */
+const almacen = {
+  leer(k, defecto) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : defecto; } catch (e) { return defecto; } },
+  guardar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+};
+let propias = almacen.leer("rg_propias", []);
+let fotos = almacen.leer("rg_fotos", {});
+
+const todas = () => BASE.concat(propias);
+
+/* ---------- Utilidades ---------- */
+const $ = (s) => document.querySelector(s);
+function el(tag, props, ...hijos) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "class") n.className = v;
+    else if (k === "style") n.setAttribute("style", v);
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  hijos.flat().forEach((h) => n.append(h instanceof Node ? h : document.createTextNode(h)));
+  return n;
+}
+function lineas(t) { return t.split("\n").map((s) => s.trim()).filter(Boolean); }
+
+function reducirFoto(archivo) {
+  return new Promise((ok, mal) => {
+    const lector = new FileReader();
+    lector.onerror = mal;
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = mal;
+      img.onload = () => {
+        const max = 800;
+        const esc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * esc);
+        c.height = Math.round(img.height * esc);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        ok(c.toDataURL("image/jpeg", 0.72));
+      };
+      img.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+function tile(r, clase) {
+  const t = el("div", { class: clase || "tile", style: "background:" + CATS[r.cat].color });
+  if (fotos[r.id]) t.append(el("img", { src: fotos[r.id], alt: "" }));
+  else t.append(r.emoji || "🍨");
+  return t;
+}
+
+/* ---------- Lista ---------- */
+let filtro = "todas";
+function pintarChips() {
+  const caja = $("#chips");
+  caja.replaceChildren();
+  const opciones = [["todas", "Todas"], ["helado", "Helados"], ["alcohol", "Con alcohol"], ["cero", "Sin alcohol 0,0"], ["mia", "Mis recetas"]];
+  opciones.forEach(([id, txt]) => {
+    caja.append(el("button", { class: "chip", type: "button", "aria-pressed": String(filtro === id),
+      onclick: () => { filtro = id; pintarChips(); pintarLista(); } }, txt));
+  });
+}
+function pintarLista() {
+  const q = $("#buscar").value.trim().toLowerCase();
+  const caja = $("#lista");
+  caja.replaceChildren();
+  const res = todas().filter((r) => (filtro === "todas" || (filtro === "mia" ? r.id.startsWith("m-") : r.cat === filtro)) &&
+    (!q || (r.nombre + " " + r.ingr.join(" ")).toLowerCase().includes(q)));
+  if (!res.length) {
+    caja.append(el("li", { class: "vacio" },
+      filtro === "mia" && !q ? "Aún no has añadido recetas. Toca “Añadir receta” para crear la primera." : "No hay recetas con esa búsqueda."));
+    return;
+  }
+  res.forEach((r) => {
+    caja.append(el("li", {},
+      el("button", { class: "fila", type: "button", onclick: () => abrirDetalle(r.id) },
+        tile(r),
+        el("div", { class: "txt" }, el("h3", {}, r.nombre), el("small", {}, CATS[r.cat].nombre + (r.adapt ? " · para tu Gelatec 1800" : ""))))));
+  });
+}
+
+/* ---------- Pantallas ---------- */
+const hist = [];
+function abrir(p) { p.classList.add("abierta"); hist.push(p); history.pushState({ p: hist.length }, ""); }
+function cerrarUltima(desdeAtras) {
+  const p = hist.pop();
+  if (!p) return;
+  p.classList.remove("abierta");
+  if (!desdeAtras) history.back();
+}
+window.addEventListener("popstate", () => { if (hist.length) cerrarUltima(true); });
+document.querySelectorAll("[data-cerrar]").forEach((b) => b.addEventListener("click", () => cerrarUltima(false)));
+
+let actualId = null;
+function abrirDetalle(id) {
+  actualId = id;
+  pintarDetalle();
+  abrir($("#pDetalle"));
+  $("#pDetalle").scrollTop = 0;
+}
+function pintarDetalle() {
+  const r = todas().find((x) => x.id === actualId);
+  if (!r) return;
+  const d = $("#detalle");
+  d.replaceChildren();
+  d.append(tile(r, "portada"));
+  d.append(el("h2", {}, r.nombre));
+  if (r.origen) d.append(el("p", { class: "origen" }, r.origen));
+  if (r.nota) d.append(el("div", { class: "nota" }, r.nota));
+  d.append(el("h3", {}, "Ingredientes"), el("ul", {}, r.ingr.map((i) => el("li", {}, i))));
+  d.append(el("h3", {}, "Preparación"), el("ol", {}, r.pasos.map((p) => el("li", {}, p))));
+
+  const acc = el("div", { class: "acciones" });
+  acc.append(el("button", { class: "btn", type: "button", onclick: () => elegirFoto(async (data) => {
+    fotos[r.id] = data;
+    if (!almacen.guardar("rg_fotos", fotos)) { delete fotos[r.id]; alert("No cabe más en el móvil. Quita alguna foto y prueba otra vez."); return; }
+    pintarDetalle(); pintarLista();
+  }) }, fotos[r.id] ? "Cambiar foto" : "Añadir foto"));
+  if (fotos[r.id]) acc.append(el("button", { class: "btn", type: "button", onclick: () => {
+    delete fotos[r.id]; almacen.guardar("rg_fotos", fotos); pintarDetalle(); pintarLista();
+  } }, "Quitar foto"));
+  if (r.cat === "mia" || propias.some((p) => p.id === r.id)) {
+    acc.append(el("button", { class: "btn peligro", type: "button", onclick: () => {
+      if (!confirm("¿Borrar esta receta?")) return;
+      propias = propias.filter((p) => p.id !== r.id);
+      delete fotos[r.id];
+      almacen.guardar("rg_propias", propias); almacen.guardar("rg_fotos", fotos);
+      cerrarUltima(false); pintarLista();
+    } }, "Borrar receta"));
+  }
+  d.append(acc);
+}
+
+/* ---------- Fotos ---------- */
+let alElegir = null;
+function elegirFoto(cb) { alElegir = cb; $("#inputFoto").value = ""; $("#inputFoto").click(); }
+$("#inputFoto").addEventListener("change", async (e) => {
+  const f = e.target.files[0];
+  if (!f || !alElegir) return;
+  try { await alElegir(await reducirFoto(f)); } catch (err) { alert("No he podido leer esa foto. Prueba con otra."); }
+});
+
+/* ---------- Nueva receta ---------- */
+let fotoNueva = null;
+$("#btnNueva").addEventListener("click", () => {
+  $("#formNueva").reset(); fotoNueva = null; $("#fotoNuevaEstado").textContent = "Sin foto";
+  abrir($("#pNueva")); $("#pNueva").scrollTop = 0;
+});
+$("#btnFotoNueva").addEventListener("click", () => elegirFoto(async (data) => {
+  fotoNueva = data; $("#fotoNuevaEstado").textContent = "Foto lista";
+}));
+$("#formNueva").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const cat = $("#fCat").value;
+  const r = { id: "m-" + Date.now(), cat, emoji: ({ helado: "🍨", alcohol: "🍹", cero: "🥤", mia: "🍽️" })[cat],
+    nombre: $("#fNombre").value.trim(), origen: $("#fOrigen").value.trim(),
+    ingr: lineas($("#fIngr").value), pasos: lineas($("#fPasos").value) };
+  if (!r.nombre || !r.ingr.length || !r.pasos.length) return;
+  propias.push(r);
+  if (!almacen.guardar("rg_propias", propias)) { propias.pop(); alert("No he podido guardar la receta en el móvil."); return; }
+  if (fotoNueva) {
+    fotos[r.id] = fotoNueva;
+    if (!almacen.guardar("rg_fotos", fotos)) { delete fotos[r.id]; alert("La receta se guardó, pero la foto no cabe. Quita alguna foto y añádela de nuevo."); }
+  }
+  cerrarUltima(false);
+  filtro = "todas"; pintarChips(); pintarLista();
+});
+
+/* ---------- Instalar ---------- */
+let eventoInstalar = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault(); eventoInstalar = e; $("#btnInstalar").style.display = "block";
+});
+$("#btnInstalar").addEventListener("click", async () => {
+  if (!eventoInstalar) return;
+  eventoInstalar.prompt(); await eventoInstalar.userChoice;
+  eventoInstalar = null; $("#btnInstalar").style.display = "none";
+});
+window.addEventListener("appinstalled", () => { $("#btnInstalar").style.display = "none"; });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+}
+
+$("#buscar").addEventListener("input", pintarLista);
+pintarChips();
+pintarLista();
+</script>
+</body>
+</html>
