@@ -42,8 +42,22 @@
   header .logo { width: 52px; height: 52px; border-radius: 14px; flex: none; }
   header h1 { font-size: 1.7rem; color: var(--pistacho); font-weight: 700; }
   header p { margin: 2px 0 0; font-size: .9rem; opacity: .8; }
-  #btnInstalar { margin-left: auto; display: none; background: var(--fresa); color: #fff; border: 0;
-    border-radius: 14px; padding: 10px 14px; font-weight: 700; font-size: .9rem; }
+  header > div:not(.acc) { min-width: 0; }
+  header { flex-wrap: wrap; }
+  .acc { margin-left: auto; display: flex; gap: 8px; }
+  #btnInstalar { display: none; background: var(--fresa); color: #fff; border: 0;
+    border-radius: 14px; padding: 10px 14px; font-weight: 700; font-size: .9rem; min-height: 44px; }
+  .btn-cab { background: var(--blanco); border: 2px solid var(--linea); border-radius: 14px;
+    padding: 10px 14px; font-weight: 700; font-size: .9rem; min-height: 44px; }
+  .aviso-copia { background: var(--vainilla); border: 2px solid #E0B94A; border-radius: 18px;
+    padding: 12px 14px; margin: 6px 0 12px; font-size: .95rem; }
+  .aviso-copia[hidden] { display: none; }
+  .aviso-copia .acciones { margin-top: 10px; }
+  .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+    background: var(--chocolate); color: #fff; padding: 12px 18px; border-radius: 14px; font-size: .95rem;
+    z-index: 40; max-width: 90%; text-align: center; display: none; }
+  .toast.visible { display: block; }
+  .estado { background: var(--blanco); border: 2px solid var(--linea); border-radius: 16px; padding: 12px 14px; margin: 14px 0; }
 
   .buscar { width: 100%; border: 2px solid var(--linea); background: var(--blanco); border-radius: 16px;
     padding: 14px 16px; font-size: 1rem; }
@@ -124,8 +138,20 @@
       <h1>Recetario Gelatec</h1>
       <p>Helados, batidos y cócteles</p>
     </div>
-    <button id="btnInstalar" type="button">Instalar</button>
+    <div class="acc">
+      <button id="btnInstalar" type="button">Instalar</button>
+      <button id="btnCopia" class="btn-cab" type="button">Copia</button>
+    </div>
   </header>
+
+  <div class="aviso-copia" id="avisoVacio" hidden>
+    <strong>¿Has perdido tus recetas o fotos?</strong><br>
+    Restaura tu última copia, el archivo «Helados» seguido de la fecha.
+    <div class="acciones">
+      <button class="btn principal" type="button" id="btnRestaurarAviso">Restaurar copia</button>
+      <button class="btn" type="button" id="btnAhoraNo">Ahora no</button>
+    </div>
+  </div>
 
   <input id="buscar" class="buscar" type="search" placeholder="Buscar receta o ingrediente" aria-label="Buscar receta o ingrediente">
   <div class="chips" id="chips" role="group" aria-label="Categorías"></div>
@@ -140,6 +166,7 @@
 </div>
 
 <button class="fab" id="btnNueva" type="button">＋ Añadir receta</button>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <!-- Detalle -->
 <section class="pantalla" id="pDetalle" aria-label="Receta">
@@ -186,7 +213,23 @@
   </div>
 </section>
 
+<!-- Copia de seguridad -->
+<section class="pantalla" id="pCopia" aria-label="Copia de seguridad">
+  <div class="cuerpo">
+    <div class="atras"><button type="button" data-cerrar>← Volver</button></div>
+    <h2 style="font-size:1.7rem;color:var(--pistacho)">Copia de seguridad</h2>
+    <p>Al abrir la app, si has cambiado recetas o fotos desde la última copia, se guarda sola una copia en la carpeta Descargas del móvil. Se llama «Helados» y la fecha (por ejemplo, Helados 20261112).</p>
+    <div class="estado" id="estadoProteccion">Comprobando…</div>
+    <div class="acciones">
+      <button class="btn principal" type="button" id="btnGuardarCopia">Guardar copia ahora</button>
+      <button class="btn" type="button" id="btnRestaurar">Restaurar una copia</button>
+    </div>
+    <p class="aviso" style="text-align:left;opacity:.85">Si borras los datos del sitio desde los ajustes del navegador, las recetas y fotos propias se pierden. Entonces abre la app y pulsa «Restaurar una copia» con tu último archivo «Helados».</p>
+  </div>
+</section>
+
 <input id="inputFoto" type="file" accept="image/*">
+<input id="inputCopia" type="file" accept=".json,application/json">
 
 <script>
 "use strict";
@@ -286,12 +329,56 @@ const BASE = [
 ];
 
 /* ---------- Almacenamiento (en el propio móvil) ---------- */
+/* Los datos se guardan en IndexedDB (más robusto que localStorage) y se pide al navegador
+   que los marque como protegidos. Si IndexedDB fallara, se usa localStorage como reserva. */
 const almacen = {
-  leer(k, defecto) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : defecto; } catch (e) { return defecto; } },
-  guardar(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+  db: null,
+  abrir() {
+    return new Promise((ok) => {
+      try {
+        const rq = indexedDB.open("helados-app", 1);
+        rq.onupgradeneeded = () => rq.result.createObjectStore("kv");
+        rq.onsuccess = () => { this.db = rq.result; ok(true); };
+        rq.onerror = () => ok(false);
+        rq.onblocked = () => ok(false);
+      } catch (e) { ok(false); }
+    });
+  },
+  leerIDB(k) {
+    return new Promise((ok) => {
+      if (!this.db) return ok(undefined);
+      try {
+        const rq = this.db.transaction("kv").objectStore("kv").get(k);
+        rq.onsuccess = () => ok(rq.result);
+        rq.onerror = () => ok(undefined);
+      } catch (e) { ok(undefined); }
+    });
+  },
+  escribirIDB(k, v) {
+    return new Promise((ok) => {
+      if (!this.db) return ok(false);
+      try {
+        const tx = this.db.transaction("kv", "readwrite");
+        tx.objectStore("kv").put(v, k);
+        tx.oncomplete = () => ok(true);
+        tx.onerror = () => ok(false);
+        tx.onabort = () => ok(false);
+      } catch (e) { ok(false); }
+    });
+  },
+  async leer(k, defecto) {
+    let v = await this.leerIDB(k);
+    if (v === undefined) { try { const t = localStorage.getItem(k); if (t) v = JSON.parse(t); } catch (e) {} }
+    return v === undefined ? defecto : v;
+  },
+  async guardar(k, v) {
+    let ok = await this.escribirIDB(k, v);
+    if (!ok) { try { localStorage.setItem(k, JSON.stringify(v)); ok = true; } catch (e) { ok = false; } }
+    return ok;
+  }
 };
-let propias = almacen.leer("rg_propias", []);
-let fotos = almacen.leer("rg_fotos", {});
+let propias = [];
+let fotos = {};
 
 const todas = () => BASE.concat(propias);
 
@@ -351,6 +438,7 @@ function pintarChips() {
   });
 }
 function pintarLista() {
+  actualizarAviso();
   const q = $("#buscar").value.trim().toLowerCase();
   const caja = $("#lista");
   caja.replaceChildren();
@@ -403,7 +491,7 @@ function pintarDetalle() {
   const acc = el("div", { class: "acciones" });
   acc.append(el("button", { class: "btn", type: "button", onclick: () => elegirFoto(async (data) => {
     fotos[r.id] = data;
-    if (!almacen.guardar("rg_fotos", fotos)) { delete fotos[r.id]; alert("No cabe más en el móvil. Quita alguna foto y prueba otra vez."); return; }
+    if (!(await almacen.guardar("rg_fotos", fotos))) { delete fotos[r.id]; alert("No cabe más en el móvil. Quita alguna foto y prueba otra vez."); return; }
     pintarDetalle(); pintarLista();
   }) }, fotos[r.id] ? "Cambiar foto" : "Añadir foto"));
   if (fotos[r.id]) acc.append(el("button", { class: "btn", type: "button", onclick: () => {
@@ -439,7 +527,7 @@ $("#btnNueva").addEventListener("click", () => {
 $("#btnFotoNueva").addEventListener("click", () => elegirFoto(async (data) => {
   fotoNueva = data; $("#fotoNuevaEstado").textContent = "Foto lista";
 }));
-$("#formNueva").addEventListener("submit", (e) => {
+$("#formNueva").addEventListener("submit", async (e) => {
   e.preventDefault();
   const cat = $("#fCat").value;
   const r = { id: "m-" + Date.now(), cat, emoji: ({ helado: "🍨", alcohol: "🍹", cero: "🥤", mia: "🍽️" })[cat],
@@ -447,10 +535,10 @@ $("#formNueva").addEventListener("submit", (e) => {
     ingr: lineas($("#fIngr").value), pasos: lineas($("#fPasos").value) };
   if (!r.nombre || !r.ingr.length || !r.pasos.length) return;
   propias.push(r);
-  if (!almacen.guardar("rg_propias", propias)) { propias.pop(); alert("No he podido guardar la receta en el móvil."); return; }
+  if (!(await almacen.guardar("rg_propias", propias))) { propias.pop(); alert("No he podido guardar la receta en el móvil."); return; }
   if (fotoNueva) {
     fotos[r.id] = fotoNueva;
-    if (!almacen.guardar("rg_fotos", fotos)) { delete fotos[r.id]; alert("La receta se guardó, pero la foto no cabe. Quita alguna foto y añádela de nuevo."); }
+    if (!(await almacen.guardar("rg_fotos", fotos))) { delete fotos[r.id]; alert("La receta se guardó, pero la foto no cabe. Quita alguna foto y añádela de nuevo."); }
   }
   cerrarUltima(false);
   filtro = "todas"; pintarChips(); pintarLista();
@@ -472,9 +560,113 @@ if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
 }
 
+/* ---------- Copia de seguridad ---------- */
+function fechaCopia() {
+  const d = new Date();
+  return d.getFullYear() + String(d.getMonth() + 1).padStart(2, "0") + String(d.getDate()).padStart(2, "0");
+}
+const nombreCopia = () => "Helados " + fechaCopia() + ".json";
+const hayDatos = () => propias.length > 0 || Object.keys(fotos).length > 0;
+function firma() {
+  const t = JSON.stringify({ propias, fotos });
+  let h = 0;
+  for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0;
+  return t.length + ":" + h;
+}
+function descargarCopia() {
+  const datos = JSON.stringify({ app: "Helados", version: 1, fecha: new Date().toISOString(), propias, fotos });
+  const url = URL.createObjectURL(new Blob([datos], { type: "application/json" }));
+  const a = document.createElement("a");
+  a.href = url; a.download = nombreCopia();
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+let tToast = null;
+function avisar(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.classList.add("visible");
+  clearTimeout(tToast); tToast = setTimeout(() => t.classList.remove("visible"), 4500);
+}
+async function copiaAlInicio() {
+  if (!hayDatos()) return;
+  const f = firma();
+  const ult = await almacen.leer("rg_ult_copia", null);
+  if (ult && ult.firma === f) return;           // nada ha cambiado desde la última copia
+  descargarCopia();
+  await almacen.guardar("rg_ult_copia", { firma: f, dia: fechaCopia() });
+  avisar("Copia guardada: " + nombreCopia());
+}
+async function restaurarCopia(archivo) {
+  try {
+    const d = JSON.parse(await archivo.text());
+    if (!d || d.app !== "Helados" || !Array.isArray(d.propias) || typeof d.fotos !== "object" || d.fotos === null) {
+      alert("Ese archivo no es una copia de esta app. Busca uno que se llame «Helados» y una fecha."); return;
+    }
+    if (hayDatos() && !confirm("Se sustituirán tus recetas y fotos actuales por las de la copia. ¿Continuar?")) return;
+    propias = d.propias; fotos = d.fotos;
+    const ok1 = await almacen.guardar("rg_propias", propias);
+    const ok2 = await almacen.guardar("rg_fotos", fotos);
+    if (!ok1 || !ok2) { alert("No he podido guardar la copia en el móvil."); return; }
+    await almacen.guardar("rg_ult_copia", { firma: firma(), dia: fechaCopia() });
+    filtro = "todas"; pintarChips(); pintarLista(); actualizarAviso();
+    avisar("Copia restaurada");
+  } catch (e) {
+    alert("No he podido leer ese archivo. Comprueba que es una copia «Helados».");
+  }
+}
+function pedirArchivoCopia() { $("#inputCopia").value = ""; $("#inputCopia").click(); }
+$("#inputCopia").addEventListener("change", (e) => { const f = e.target.files[0]; if (f) restaurarCopia(f); });
+
+function actualizarAviso() {
+  let oculto = false;
+  try { oculto = sessionStorage.getItem("rg_ahora_no") === "1"; } catch (e) {}
+  $("#avisoVacio").hidden = hayDatos() || oculto;
+}
+$("#btnRestaurarAviso").addEventListener("click", pedirArchivoCopia);
+$("#btnAhoraNo").addEventListener("click", () => {
+  try { sessionStorage.setItem("rg_ahora_no", "1"); } catch (e) {}
+  actualizarAviso();
+});
+
+async function protegido() {
+  try { return !!(navigator.storage && navigator.storage.persisted && await navigator.storage.persisted()); } catch (e) { return false; }
+}
+async function pedirProteccion() {
+  try {
+    if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist();
+  } catch (e) {}
+}
+$("#btnCopia").addEventListener("click", async () => {
+  abrir($("#pCopia")); $("#pCopia").scrollTop = 0;
+  const si = await protegido();
+  $("#estadoProteccion").textContent = si
+    ? "Almacenamiento protegido: sí. El navegador no borrará tus datos por falta de espacio."
+    : "Almacenamiento protegido: no concedido todavía. Instala la app y úsala con regularidad; hasta entonces, confía en las copias automáticas.";
+});
+$("#btnGuardarCopia").addEventListener("click", () => {
+  if (!hayDatos()) { alert("Aún no tienes recetas ni fotos propias que guardar."); return; }
+  descargarCopia();
+  almacen.guardar("rg_ult_copia", { firma: firma(), dia: fechaCopia() });
+  avisar("Copia guardada: " + nombreCopia());
+});
+$("#btnRestaurar").addEventListener("click", pedirArchivoCopia);
+
+/* ---------- Arranque ---------- */
+async function iniciar() {
+  await almacen.abrir();
+  const enIDB = (await almacen.leerIDB("rg_propias")) !== undefined;
+  propias = await almacen.leer("rg_propias", []);
+  fotos = await almacen.leer("rg_fotos", {});
+  if (!enIDB && hayDatos()) {                    // pasa los datos de versiones antiguas a IndexedDB
+    await almacen.guardar("rg_propias", propias);
+    await almacen.guardar("rg_fotos", fotos);
+  }
+  pedirProteccion();
+  pintarChips(); pintarLista(); actualizarAviso();
+  await copiaAlInicio();
+}
 $("#buscar").addEventListener("input", pintarLista);
-pintarChips();
-pintarLista();
+iniciar();
 </script>
 </body>
 </html>
