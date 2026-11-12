@@ -1,4 +1,4 @@
-const CACHE = "recetario-gelatec-v3";
+const CACHE = "recetario-gelatec-v4";
 const ARCHIVOS = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {

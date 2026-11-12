@@ -218,7 +218,8 @@
   <div class="cuerpo">
     <div class="atras"><button type="button" data-cerrar>← Volver</button></div>
     <h2 style="font-size:1.7rem;color:var(--pistacho)">Copia de seguridad</h2>
-    <p>Al abrir la app, si has cambiado recetas o fotos desde la última copia, se guarda sola una copia en la carpeta Descargas del móvil. Se llama «Helados» y la fecha (por ejemplo, Helados 20261112).</p>
+    <p>Al abrir la app, si has cambiado recetas o fotos desde la última copia, se guarda sola una copia en la carpeta Descargas del móvil. Se llama «Helados» y la fecha (por ejemplo, Helados 20261112). La copia incluye todas las recetas, las de la app y las tuyas, y tus fotos.</p>
+    <p style="font-size:.9rem;opacity:.85">Las recetas que trae la app no se pueden perder, porque forman parte de ella. Lo que sí se puede perder, y por eso se copia, son tus recetas nuevas y tus fotos.</p>
     <div class="estado" id="estadoProteccion">Comprobando…</div>
     <div class="acciones">
       <button class="btn principal" type="button" id="btnGuardarCopia">Guardar copia ahora</button>
@@ -574,7 +575,7 @@ function firma() {
   return t.length + ":" + h;
 }
 function descargarCopia() {
-  const datos = JSON.stringify({ app: "Helados", version: 1, fecha: new Date().toISOString(), propias, fotos });
+  const datos = JSON.stringify({ app: "Helados", version: 1, fecha: new Date().toISOString(), recetas: todas(), propias, fotos });
   const url = URL.createObjectURL(new Blob([datos], { type: "application/json" }));
   const a = document.createElement("a");
   a.href = url; a.download = nombreCopia();
@@ -644,7 +645,6 @@ $("#btnCopia").addEventListener("click", async () => {
     : "Almacenamiento protegido: no concedido todavía. Instala la app y úsala con regularidad; hasta entonces, confía en las copias automáticas.";
 });
 $("#btnGuardarCopia").addEventListener("click", () => {
-  if (!hayDatos()) { alert("Aún no tienes recetas ni fotos propias que guardar."); return; }
   descargarCopia();
   almacen.guardar("rg_ult_copia", { firma: firma(), dia: fechaCopia() });
   avisar("Copia guardada: " + nombreCopia());
