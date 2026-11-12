@@ -225,6 +225,7 @@
       <button class="btn principal" type="button" id="btnGuardarCopia">Guardar copia ahora</button>
       <button class="btn" type="button" id="btnRestaurar">Restaurar una copia</button>
     </div>
+    <p class="aviso" style="text-align:left;opacity:.85" id="versionApp"></p>
     <p class="aviso" style="text-align:left;opacity:.85">Si borras los datos del sitio desde los ajustes del navegador, las recetas y fotos propias se pierden. Entonces abre la app y pulsa «Restaurar una copia» con tu último archivo «Helados».</p>
   </div>
 </section>
@@ -557,7 +558,13 @@ $("#btnInstalar").addEventListener("click", async () => {
 });
 window.addEventListener("appinstalled", () => { $("#btnInstalar").style.display = "none"; });
 
+const APP_VERSION = "5";
 if ("serviceWorker" in navigator) {
+  const teniaControl = !!navigator.serviceWorker.controller;
+  let recargando = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {   // nueva versión instalada: recarga una vez
+    if (teniaControl && !recargando) { recargando = true; location.reload(); }
+  });
   window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
 }
 
@@ -639,6 +646,7 @@ async function pedirProteccion() {
 }
 $("#btnCopia").addEventListener("click", async () => {
   abrir($("#pCopia")); $("#pCopia").scrollTop = 0;
+  $("#versionApp").textContent = "Versión de la app: " + APP_VERSION;
   const si = await protegido();
   $("#estadoProteccion").textContent = si
     ? "Almacenamiento protegido: sí. El navegador no borrará tus datos por falta de espacio."
